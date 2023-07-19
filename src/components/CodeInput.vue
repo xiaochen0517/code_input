@@ -26,11 +26,11 @@ const tokenizer = {
   ],
   function: [
     { reg: /^\$\{[a-zA-Z0-9_]+}/, class: "uat-placeholder" },
-    { reg: /^\d\.?\d*/, class: "number" },
+    { reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i, class: "number" },
     { reg: /^,/, class: "separator" },
     { reg: /^\s+/, class: "space" },
     { reg: /^\)/, class: "function-symbol", next: "root" },
-    { reg: /^[^0-9\.\s\)]/, class: "string" },
+    { reg: /^[^\s\)]/, class: "string" },
   ],
 };
 
@@ -64,92 +64,58 @@ export default {
       // 读取EditorBoxRefs下的html中的内容
       const changedValue = this.getAllTextFromElement(editorElement);
       // 获取当前光标位置
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-      // 获取当前编辑器元素的所有子元素
-      const childNodes = editorElement.childNodes;
-      // 遍历子元素，找到光标所在的子元素
-      let cursorNode = null;
-      for (let i = 0; i < childNodes.length; i++) {
-        const child = childNodes[i];
-        if (child.nodeType === Node.TEXT_NODE) {
-          if (range.startOffset <= child.textContent.length) {
-            cursorNode = child;
-            break;
-          } else {
-            range.startOffset -= child.textContent.length;
-          }
-        }
-        if (child.nodeType === Node.ELEMENT_NODE) {
-          if (range.startOffset <= child.textContent.length) {
-            cursorNode = child;
-            break;
-          } else {
-            range.startOffset -= child.textContent.length;
-          }
-        }
-      }
-      // 计算当前位置在整个文本中的位置
-      let cursorIndex = 0;
-      for (let i = 0; i < childNodes.length; i++) {
-        const child = childNodes[i];
-        if (child.nodeType === Node.TEXT_NODE) {
-          if (child === cursorNode) {
-            cursorIndex += range.startOffset;
-            break;
-          } else {
-            cursorIndex += child.textContent.length;
-          }
-        }
-        if (child.nodeType === Node.ELEMENT_NODE) {
-          if (child === cursorNode) {
-            cursorIndex += range.startOffset;
-            break;
-          } else {
-            cursorIndex += child.textContent.length;
-          }
-        }
-      }
-
+      const cursorIndex = this.getCursorIndex();
       // 更新内容
       this.$emit("input", changedValue);
       // 恢复光标位置
+      this.setCursorPos(cursorIndex);
+    },
+    getCursorIndex() {
+      const editorElement = this.$refs.EditorBoxRefs;
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      // 遍历子元素，找到光标所在的子元素
+      let cursorIndex = 0;
+      for (const childNode of editorElement.childNodes) {
+        const nodeTextContent = childNode.textContent;
+        if (range.endContainer === childNode.childNodes[0]) {
+          cursorIndex += range.endOffset;
+          break;
+        } else {
+          cursorIndex += nodeTextContent.length;
+        }
+      }
+      return cursorIndex;
+    },
+    setCursorPos(cursorIndex) {
+      const editorElement = this.$refs.EditorBoxRefs;
       this.$nextTick(() => {
-        // 获取当前编辑器元素的所有子元素
-        const childNodes = editorElement.childNodes;
-        // 遍历子元素，找到光标所在的子元素
         let cursorNode = null;
         let cursorOffset = 0;
-        for (let i = 0; i < childNodes.length; i++) {
-          const child = childNodes[i];
-          if (child.nodeType === Node.TEXT_NODE) {
-            if (cursorIndex <= child.textContent.length) {
-              cursorNode = child;
+        if (cursorIndex == 0) {
+          cursorNode = editorElement;
+          cursorOffset = 0;
+        } else {
+          // 遍历子元素，找到光标所在的子元素
+          for (const childNode of editorElement.childNodes) {
+            const nodeTextContent = childNode.textContent;
+            if (cursorIndex <= nodeTextContent.length) {
+              cursorNode = childNode.childNodes[0];
               cursorOffset = cursorIndex;
               break;
             } else {
-              cursorIndex -= child.textContent.length;
-            }
-          }
-          if (child.nodeType === Node.ELEMENT_NODE) {
-            if (cursorIndex <= child.textContent.length) {
-              cursorNode = child;
-              cursorOffset = cursorIndex;
-              break;
-            } else {
-              cursorIndex -= child.textContent.length;
+              cursorIndex -= nodeTextContent.length;
             }
           }
         }
         // 设置光标位置
-        const selection = window.getSelection();
-        const range = document.createRange();
+        let selection = window.getSelection();
+        let range = selection.getRangeAt(0);
         range.setStart(cursorNode, cursorOffset);
         range.collapse(true);
         selection.removeAllRanges();
         selection.addRange(range);
       });
-      console.log("edit", this.value);
     },
     getAllTextFromElement(element) {
       let text = "";
