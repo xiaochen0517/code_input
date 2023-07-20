@@ -1,11 +1,13 @@
 <template>
   <div id="app">
-    <code-input v-model="codeString" />
+    <div style="width: 500px">
+      <code-input v-model="codeString" />
+    </div>
   </div>
 </template>
 
 <script>
-import CodeInput from "./components/CodeInput.vue";
+import CodeInput from "../plugins/components/codeinput/CodeInput.vue";
 
 export default {
   name: "App",
@@ -14,7 +16,7 @@ export default {
   },
   data() {
     return {
-      codeString: "${test_name} MAX(v  ) WORLD",
+      codeString: "${name[0]} ${test_name} MAX(1.1, ) \"WORLD\" other things",
     };
   },
   watch: {

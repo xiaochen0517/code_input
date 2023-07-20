@@ -1,11 +1,12 @@
 <template>
-  <div class="code-input">
+  <div ref="codeInputContainerRefs" class="code-input">
     <div
       ref="EditorBoxRefs"
       class="editor-box"
       contenteditable="true"
       v-html="htmlContent"
       @input="handleInput"
+      @keydown.delete="handleDelete"
     ></div>
   </div>
 </template>
@@ -13,24 +14,34 @@
 <script>
 const tokenizer = {
   root: [
-    { reg: /^\$\{[a-zA-Z0-9_]+}/, class: "uat-placeholder" },
-    { reg: /^"/, class: "string-quotation", next: "string" },
-    { reg: /^MAX\(/i, class: "function-symbol", next: "function" },
-    { reg: /^\s+/, class: "space" },
-    { reg: /^./, class: "other-content" },
+    { reg: /^\$\{/, class: "keyword", next: "placeholder" },
+    { reg: /^"/, class: "string", next: "string" },
+    { reg: /^(MAX|ROUND|MIN)\(/i, class: "keyword", next: "function" },
+    { reg: /^\s/, class: "space" },
     { reg: /^[+\-*/]/, class: "operator" },
+    { reg: /^./, class: "other-content" },
   ],
   string: [
-    { reg: /^"/, class: "string-quotation", next: "root" },
-    { reg: /^[^"]+/, class: "string-content" },
+    { reg: /^"/, class: "string", next: "root" },
+    { reg: /^[^"]+/, class: "string" },
   ],
   function: [
     { reg: /^\$\{[a-zA-Z0-9_]+}/, class: "uat-placeholder" },
     { reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i, class: "number" },
     { reg: /^,/, class: "separator" },
     { reg: /^\s+/, class: "space" },
-    { reg: /^\)/, class: "function-symbol", next: "root" },
+    { reg: /^\)/, class: "keyword", next: "root" },
     { reg: /^[^\s\)]/, class: "string" },
+  ],
+  placeholder: [
+    { reg: /^}/, class: "keyword", next: "root" },
+    { reg: /^\[/, class: "keyword", next: "phnumber" },
+    { reg: /^[^}\[]+/, class: "string" },
+  ],
+  phnumber: [
+    { reg: /^[0-9]+/, class: "number" },
+    { reg: /^]/, class: "keyword", next: "placeholder" },
+    { reg: /^[^0-9\]]/, class: "string", next: "placeholder" },
   ],
 };
 
@@ -44,9 +55,12 @@ export default {
   },
   data() {
     return {
-      inputValue: this.value,
       content: "",
       htmlContent: "",
+      temp: 0,
+      timer: null,
+      triger: false,
+      cursorIndex: null,
     };
   },
   watch: {
@@ -58,17 +72,78 @@ export default {
       },
     },
   },
+  mounted() {
+    this.handleLeftAndRightKey();
+  },
   methods: {
+    handleLeftAndRightKey() {
+      this.$refs.EditorBoxRefs.addEventListener("keydown", (event) => {
+        // 获取按下的键的代码
+        var keyCode = event.keyCode || event.which;
+
+        // 如果是左箭头键（keyCode为37）或右箭头键（keyCode为39）
+        if (keyCode === 37 || keyCode === 39) {
+          // 获取当前选区
+          var selection = window.getSelection();
+          var range = selection.getRangeAt(0);
+
+          // 获取选区的起始位置
+          var startContainer = range.startContainer;
+          var startOffset = range.startOffset;
+
+          // 如果按下的是左箭头键，并且光标在contenteditable元素的第一个位置
+          if (keyCode === 37 && startOffset === 0) {
+            // 获取contenteditable元素的父元素
+            var parentElement = startContainer.parentElement;
+            // 获取光标对象
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            // 获取到上一个元素
+            const previousElement = parentElement.previousElementSibling;
+            // 如果上一个元素存在
+            if (previousElement) {
+              // 将光标移动到上一个元素的最后一个字符之后
+              range.setStart(
+                previousElement.childNodes[0],
+                previousElement.textContent.length - 1
+              );
+            }
+          }
+          // 如果按下的是右箭头键，并且光标在contenteditable元素的最后一个位置
+          if (keyCode === 39 && startOffset === startContainer.length) {
+            var parentElement = startContainer.parentElement;
+            // 获取光标对象
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            // 获取到下一个元素
+            const nextElement = parentElement.nextElementSibling;
+            // 如果下一个元素存在
+            if (nextElement) {
+              // 将光标移动到下一个元素的第一个字符之后
+              range.setStart(nextElement.childNodes[0], 1);
+            }
+          }
+        }
+      });
+    },
+    handleDelete(event) {
+      // 获取当前光标位置
+      this.cursorIndex = this.getCursorIndex() - 1;
+    },
     handleInput(event) {
       const editorElement = this.$refs.EditorBoxRefs;
       // 读取EditorBoxRefs下的html中的内容
       const changedValue = this.getAllTextFromElement(editorElement);
-      // 获取当前光标位置
-      const cursorIndex = this.getCursorIndex();
+      let cursorIndex = this.getCursorIndex();
+      if (this.cursorIndex != null) {
+        cursorIndex = this.cursorIndex;
+      }
       // 更新内容
       this.$emit("input", changedValue);
       // 恢复光标位置
       this.setCursorPos(cursorIndex);
+      // 去除index
+      this.cursorIndex = null;
     },
     getCursorIndex() {
       const editorElement = this.$refs.EditorBoxRefs;
@@ -80,7 +155,7 @@ export default {
         const nodeTextContent = childNode.textContent;
         if (range.endContainer === childNode.childNodes[0]) {
           cursorIndex += range.endOffset;
-          break;
+          return cursorIndex;
         } else {
           cursorIndex += nodeTextContent.length;
         }
@@ -134,7 +209,6 @@ export default {
       return text;
     },
     parseString2Html(content, states) {
-      console.log(content);
       // 储存当前转换的内容
       let contentTemp = content;
       let resultContent = "";
@@ -165,24 +239,74 @@ export default {
 <style scoped lang="less">
 .code-input {
   font-family: "Fira Code", monospace;
+  border: 2px solid #b4bccc;
+  border-radius: 5px;
+  overflow: hidden;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px;
+  background: #ececec;
+
+  &:focus-within {
+    border: 2px solid #1e87f0;
+  }
 
   .editor-box {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow: auto;
+
+    &:focus {
+      outline: none;
+    }
+
+    &::-webkit-scrollbar {
+      height: 3px;
+      cursor: pointer;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: #888; /* 设置滚动条的颜色 */
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: #555; /* 设置滚动条的悬停颜色 */
+      cursor: pointer;
+    }
+
+    &::-webkit-scrollbar-track {
+      background-color: #ececec; /* 设置滚动条的背景颜色 */
+    }
   }
 }
 </style>
 
 <style>
+span {
+  white-space: pre;
+}
 .keyword {
-  color: #ff0000;
-}
-.uat-placeholder {
-  color: #00ff00;
-}
-.function-symbol {
   color: #0000ff;
 }
+.uat-placeholder-quotation {
+  color: #00ff00;
+}
+.uat-placeholder-content {
+  color: #a31515;
+}
+.string {
+  color: #a31515;
+}
 .number {
-  color: #ff00ff;
+  color: #098658;
 }
 .separator {
   color: #ff0000;
