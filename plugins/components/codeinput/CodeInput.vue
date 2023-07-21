@@ -5,6 +5,8 @@
       class="editor-box"
       contenteditable="true"
       v-html="htmlContent"
+      @compositionstart="isComposing = true"
+      @compositionend="compositionend"
       @input="handleInput"
       @keydown.delete="handleDelete"
     ></div>
@@ -19,19 +21,29 @@ const tokenizer = {
     { reg: /^(MAX|ROUND|MIN)\(/i, class: "keyword", next: "function" },
     { reg: /^\s/, class: "space" },
     { reg: /^[+\-*/]/, class: "operator" },
-    { reg: /^./, class: "other-content" },
+    { reg: /^./, class: "string" },
   ],
   string: [
     { reg: /^"/, class: "string", next: "root" },
     { reg: /^[^"]+/, class: "string" },
   ],
   function: [
-    { reg: /^\$\{[a-zA-Z0-9_]+}/, class: "uat-placeholder" },
-    { reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?$/i, class: "number" },
+    { reg: /^\$\{/, class: "keyword", next: "func_placeholder" },
+    { reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?/i, class: "number" },
     { reg: /^,/, class: "separator" },
     { reg: /^\s+/, class: "space" },
     { reg: /^\)/, class: "keyword", next: "root" },
     { reg: /^[^\s\)]/, class: "string" },
+  ],
+  func_placeholder: [
+    { reg: /^}/, class: "keyword", next: "function" },
+    { reg: /^\[/, class: "keyword", next: "phnumber" },
+    { reg: /^[^}\[]+/, class: "string" },
+  ],
+  func_ph_number: [
+    { reg: /^[0-9]+/, class: "number" },
+    { reg: /^]/, class: "keyword", next: "func_placeholder" },
+    { reg: /^[^0-9\]]/, class: "string" },
   ],
   placeholder: [
     { reg: /^}/, class: "keyword", next: "root" },
@@ -41,7 +53,7 @@ const tokenizer = {
   phnumber: [
     { reg: /^[0-9]+/, class: "number" },
     { reg: /^]/, class: "keyword", next: "placeholder" },
-    { reg: /^[^0-9\]]/, class: "string", next: "placeholder" },
+    { reg: /^[^0-9\]]/, class: "string" },
   ],
 };
 
@@ -61,6 +73,7 @@ export default {
       timer: null,
       triger: false,
       cursorIndex: null,
+      isComposing: false,
     };
   },
   watch: {
@@ -127,21 +140,37 @@ export default {
       });
     },
     handleDelete(event) {
-      // 获取当前光标位置
+      if (
+        this.isComposing &&
+        this.cursorIndex != null &&
+        this.cursorIndex > 0
+      ) {
+        return;
+      }
+      // 设置缓存光标位置
       this.cursorIndex = this.getCursorIndex() - 1;
     },
-    handleInput(event) {
+    compositionend() {
+      this.isComposing = false;
+      this.handleInput();
+    },
+    async handleInput(event) {
+      // 如果中文输入法已经关闭，则处理输入事件
+      if (this.isComposing) {
+        return;
+      }
       const editorElement = this.$refs.EditorBoxRefs;
       // 读取EditorBoxRefs下的html中的内容
       const changedValue = this.getAllTextFromElement(editorElement);
       let cursorIndex = this.getCursorIndex();
-      if (this.cursorIndex != null) {
+      console.log("getCursorIndex", cursorIndex);
+      if (this.cursorIndex != null && this.cursorIndex >= 0) {
         cursorIndex = this.cursorIndex;
       }
       // 更新内容
       this.$emit("input", changedValue);
       // 恢复光标位置
-      this.setCursorPos(cursorIndex);
+      await this.setCursorPos(cursorIndex);
       // 去除index
       this.cursorIndex = null;
     },
@@ -162,35 +191,37 @@ export default {
       }
       return cursorIndex;
     },
-    setCursorPos(cursorIndex) {
+    async setCursorPos(cursorIndex) {
+      console.log("cursorIndex", cursorIndex);
       const editorElement = this.$refs.EditorBoxRefs;
-      this.$nextTick(() => {
-        let cursorNode = null;
-        let cursorOffset = 0;
-        if (cursorIndex == 0) {
-          cursorNode = editorElement;
-          cursorOffset = 0;
-        } else {
-          // 遍历子元素，找到光标所在的子元素
-          for (const childNode of editorElement.childNodes) {
-            const nodeTextContent = childNode.textContent;
-            if (cursorIndex <= nodeTextContent.length) {
-              cursorNode = childNode.childNodes[0];
-              cursorOffset = cursorIndex;
-              break;
-            } else {
-              cursorIndex -= nodeTextContent.length;
-            }
+      await this.$nextTick();
+      // this.$nextTick(() => {
+      let cursorNode = null;
+      let cursorOffset = 0;
+      if (cursorIndex == 0) {
+        cursorNode = editorElement;
+        cursorOffset = 0;
+      } else {
+        // 遍历子元素，找到光标所在的子元素
+        for (const childNode of editorElement.childNodes) {
+          const nodeTextContent = childNode.textContent;
+          if (cursorIndex <= nodeTextContent.length) {
+            cursorNode = childNode.childNodes[0];
+            cursorOffset = cursorIndex;
+            break;
+          } else {
+            cursorIndex -= nodeTextContent.length;
           }
         }
-        // 设置光标位置
-        let selection = window.getSelection();
-        let range = selection.getRangeAt(0);
-        range.setStart(cursorNode, cursorOffset);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      });
+      }
+      // 设置光标位置
+      let selection = window.getSelection();
+      let range = selection.getRangeAt(0);
+      range.setStart(cursorNode, cursorOffset);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      // });
     },
     getAllTextFromElement(element) {
       let text = "";

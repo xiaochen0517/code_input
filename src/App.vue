@@ -16,7 +16,7 @@ export default {
   },
   data() {
     return {
-      codeString: "${name[0]} ${test_name} MAX(1.1, ) \"WORLD\" other things",
+      codeString: "",
     };
   },
   watch: {
