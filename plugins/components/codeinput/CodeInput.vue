@@ -1,14 +1,14 @@
 <template>
   <div ref="codeInputContainerRefs" class="code-input">
     <div
-      ref="EditorBoxRefs"
-      class="editor-box"
-      contenteditable="true"
-      v-html="htmlContent"
-      @compositionstart="isComposing = true"
-      @compositionend="compositionend"
-      @input="handleInput"
-      @keydown.delete="handleDelete"
+        ref="EditorBoxRefs"
+        class="editor-box"
+        contenteditable="true"
+        v-html="htmlContent"
+        @compositionstart="isComposing = true"
+        @compositionend="compositionend"
+        @input="handleInput"
+        @keydown.delete="handleDelete"
     ></div>
   </div>
 </template>
@@ -16,51 +16,51 @@
 <script>
 const tokenizer = {
   root: [
-    { reg: /^\$\{/, class: "keyword", next: "placeholder" },
-    { reg: /^"/, class: "string", next: "string" },
-    { reg: /^(MAX|ROUND|MIN)\(/i, class: "keyword", next: "function" },
-    { reg: /^\s/, class: "space" },
-    { reg: /^[+\-*/]/, class: "operator" },
-    { reg: /^./, class: "string" },
+    {reg: /^\$\{/, class: "keyword", next: "placeholder"},
+    {reg: /^"/, class: "string", next: "string"},
+    {reg: /^(MAX|ROUND|MIN)\(/i, class: "keyword", next: "function"},
+    {reg: /^\s/, class: "space"},
+    {reg: /^[+\-*/]/, class: "operator"},
+    {reg: /^./, class: "string"},
   ],
   string: [
-    { reg: /^"/, class: "string", next: "root" },
-    { reg: /^[^"]+/, class: "string" },
+    {reg: /^"/, class: "string", next: "root"},
+    {reg: /^[^"]+/, class: "string"},
   ],
   function: [
-    { reg: /^\$\{/, class: "keyword", next: "func_placeholder" },
-    { reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?/i, class: "number" },
-    { reg: /^,/, class: "separator" },
-    { reg: /^\s+/, class: "space" },
-    { reg: /^\)/, class: "keyword", next: "root" },
-    { reg: /^[^\s\)]/, class: "string" },
+    {reg: /^\$\{/, class: "keyword", next: "func_placeholder"},
+    {reg: /^[-+]?(\d+(\.\d*)?|\.\d+)(e[-+]?\d+)?/i, class: "number"},
+    {reg: /^,/, class: "separator"},
+    {reg: /^\s+/, class: "space"},
+    {reg: /^\)/, class: "keyword", next: "root"},
+    {reg: /^[^\s\)]/, class: "string"},
   ],
   func_placeholder: [
-    { reg: /^}/, class: "keyword", next: "function" },
-    { reg: /^\[/, class: "keyword", next: "phnumber" },
-    { reg: /^[^}\[]+/, class: "string" },
+    {reg: /^}/, class: "keyword", next: "function"},
+    {reg: /^\[/, class: "keyword", next: "phnumber"},
+    {reg: /^[^}\[]+/, class: "string"},
   ],
   func_ph_number: [
-    { reg: /^[0-9]+/, class: "number" },
-    { reg: /^]/, class: "keyword", next: "func_placeholder" },
-    { reg: /^[^0-9\]]/, class: "string" },
+    {reg: /^[0-9]+/, class: "number"},
+    {reg: /^]/, class: "keyword", next: "func_placeholder"},
+    {reg: /^[^0-9\]]/, class: "string"},
   ],
   placeholder: [
-    { reg: /^}/, class: "keyword", next: "root" },
-    { reg: /^\[/, class: "keyword", next: "phnumber" },
-    { reg: /^[^}\[]+/, class: "string" },
+    {reg: /^}/, class: "keyword", next: "root"},
+    {reg: /^\[/, class: "keyword", next: "phnumber"},
+    {reg: /^[^}\[]+/, class: "string"},
   ],
   phnumber: [
-    { reg: /^[0-9]+/, class: "number" },
-    { reg: /^]/, class: "keyword", next: "placeholder" },
-    { reg: /^[^0-9\]]/, class: "string" },
+    {reg: /^[0-9]+/, class: "number"},
+    {reg: /^]/, class: "keyword", next: "placeholder"},
+    {reg: /^[^0-9\]]/, class: "string"},
   ],
 };
 
 export default {
   name: "CodeInput",
   props: {
-    value: {
+    modelValue: {
       type: String,
       default: "",
     },
@@ -71,18 +71,18 @@ export default {
       htmlContent: "",
       temp: 0,
       timer: null,
-      triger: false,
+      trigger: false,
       cursorIndex: null,
       isComposing: false,
     };
   },
   watch: {
-    value: {
-      immediate: true,
+    modelValue: {
       handler(val) {
         this.content = val;
         this.htmlContent = this.parseString2Html(val, tokenizer.root);
       },
+      immediate: true,
     },
   },
   mounted() {
@@ -92,22 +92,22 @@ export default {
     handleLeftAndRightKey() {
       this.$refs.EditorBoxRefs.addEventListener("keydown", (event) => {
         // 获取按下的键的代码
-        var keyCode = event.keyCode || event.which;
+        let keyCode = event.keyCode || event.which;
 
         // 如果是左箭头键（keyCode为37）或右箭头键（keyCode为39）
         if (keyCode === 37 || keyCode === 39) {
           // 获取当前选区
-          var selection = window.getSelection();
-          var range = selection.getRangeAt(0);
+          let selection = window.getSelection();
+          let range = selection.getRangeAt(0);
 
           // 获取选区的起始位置
-          var startContainer = range.startContainer;
-          var startOffset = range.startOffset;
+          let startContainer = range.startContainer;
+          let startOffset = range.startOffset;
 
           // 如果按下的是左箭头键，并且光标在contenteditable元素的第一个位置
           if (keyCode === 37 && startOffset === 0) {
             // 获取contenteditable元素的父元素
-            var parentElement = startContainer.parentElement;
+            let parentElement = startContainer.parentElement;
             // 获取光标对象
             const selection = window.getSelection();
             const range = selection.getRangeAt(0);
@@ -117,14 +117,14 @@ export default {
             if (previousElement) {
               // 将光标移动到上一个元素的最后一个字符之后
               range.setStart(
-                previousElement.childNodes[0],
-                previousElement.textContent.length - 1
+                  previousElement.childNodes[0],
+                  previousElement.textContent.length - 1
               );
             }
           }
           // 如果按下的是右箭头键，并且光标在contenteditable元素的最后一个位置
           if (keyCode === 39 && startOffset === startContainer.length) {
-            var parentElement = startContainer.parentElement;
+            let parentElement = startContainer.parentElement;
             // 获取光标对象
             const selection = window.getSelection();
             const range = selection.getRangeAt(0);
@@ -141,9 +141,9 @@ export default {
     },
     handleDelete(event) {
       if (
-        this.isComposing &&
-        this.cursorIndex != null &&
-        this.cursorIndex > 0
+          this.isComposing &&
+          this.cursorIndex != null &&
+          this.cursorIndex > 0
       ) {
         return;
       }
@@ -168,7 +168,7 @@ export default {
         cursorIndex = this.cursorIndex;
       }
       // 更新内容
-      this.$emit("input", changedValue);
+      this.$emit("update:modelValue", changedValue);
       // 恢复光标位置
       await this.setCursorPos(cursorIndex);
       // 去除index
@@ -198,7 +198,7 @@ export default {
       // this.$nextTick(() => {
       let cursorNode = null;
       let cursorOffset = 0;
-      if (cursorIndex == 0) {
+      if (cursorIndex === 0) {
         cursorNode = editorElement;
         cursorOffset = 0;
       } else {
@@ -217,7 +217,9 @@ export default {
       // 设置光标位置
       let selection = window.getSelection();
       let range = selection.getRangeAt(0);
-      range.setStart(cursorNode, cursorOffset);
+      if (cursorNode !== undefined && cursorNode !== null) {
+        range.setStart(cursorNode, cursorOffset);
+      }
       range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
@@ -240,6 +242,7 @@ export default {
       return text;
     },
     parseString2Html(content, states) {
+      content = !content ? "" : content;
       // 储存当前转换的内容
       let contentTemp = content;
       let resultContent = "";
@@ -324,24 +327,31 @@ export default {
 span {
   white-space: pre;
 }
+
 .keyword {
   color: #0000ff;
 }
+
 .uat-placeholder-quotation {
   color: #00ff00;
 }
+
 .uat-placeholder-content {
   color: #a31515;
 }
+
 .string {
   color: #a31515;
 }
+
 .number {
   color: #098658;
 }
+
 .separator {
   color: #ff0000;
 }
+
 .operator {
   color: #ff0000;
 }

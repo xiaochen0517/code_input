@@ -1,22 +1,28 @@
 import CodeInput from "./components/codeinput"
 
-const commponents = [
+// 组件数组
+const components = [
   CodeInput
 ];
 
-const install = function (Vue, opts = {}) {
-  if (install.installed) return;
-  install.installed = true;
-  commponents.map(component => {
-    Vue.component(component.name, component);
+// 定义安装函数，接受app作为参数
+const install = function (app, opts = {}) {
+  // 在Vue 3中，不需要检查install.installed标志
+  components.forEach(component => {
+    app.component(component.name, component);
   });
 };
 
-if (typeof window !== "undefined" && window.Vue) {
-  install(window.Vue);
-}
-
+// 创建一个可以通过app.use()使用的插件对象
 export default {
   install,
-  ...commponents
+  ...components.reduce((obj, component) => {
+    obj[component.name] = component;
+    return obj;
+  }, {})
 };
+
+// 自动安装，如果检测到Vue是全局变量
+if (typeof window !== 'undefined' && window.Vue) {
+  install(window.Vue);
+}
