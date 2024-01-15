@@ -1,14 +1,16 @@
-# code_input
+<h1 align="center">code_input</h1>
 
-本项目是一个适用于 `vue2` 的代码高亮输入框组件，轻量高速且只支持高亮及编辑功能，不支持代码检查等其他功能。
+<p align="center">
+本项目是一个适用于 <code>vue2</code> 和 <code>vue3</code> 的代码高亮输入框组件，轻量高速且只支持高亮及编辑功能，不支持代码检查等其他功能。
+</p>
 
 <center>
-  <img src="./docs/example.png" alt="使用示例">
+  <img src="./docs/example.png" alt="示例">
 </center>
 
-## 使用
+## 🍔使用
 
-### 下载包
+### 🫖下载包
 
 `npm` 方式：
 
@@ -22,7 +24,9 @@ npm install @mochenya/code_input -D
 yarn add @mochenya/code_input
 ```
 
-### 配置
+### 🍳配置
+
+#### 🥯vue2 配置
 
 在 `vue2` 项目的 `main.js` 添加以下内容：
 
@@ -44,3 +48,15 @@ Vue.use(CodeInput);
   </div>
 </template>
 ```
+
+#### 🧀vue3 配置
+
+在 `vue3` 项目的 `main.js` 添加以下内容：
+
+```js
+// TODO 待完成
+```
+
+## 🍜License
+
+[MIT](./LICENSE)
