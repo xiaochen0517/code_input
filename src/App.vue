@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import CodeInput from "~/components/codeinput/CodeInput.vue";
+import CodeInput from "../plugins/components/codeinput/CodeInput.vue";
 import {ref, watch} from "vue";
 
 const codeString = ref("");
@@ -16,5 +16,3 @@ watch(codeString, (val) => {
   console.log("父组件参数变化", val);
 }, {immediate: true});
 </script>
-
-<style></style>
